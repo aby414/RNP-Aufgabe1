@@ -1,0 +1,2 @@
+Okt 25, 2017 2:59:45 PM MailFile configLogger
+INFORMATION: HALLO0
