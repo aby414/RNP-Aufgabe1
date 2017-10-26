@@ -1,6 +1,7 @@
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -15,8 +16,9 @@ public class MailFile{
 
     private SSLSocketFactory sslSocketFactory;
     private SSLSocket sslSocket;
-    private DataOutputStream dataOutputStream;
-    
+    private DataOutputStream outputStream;
+    private DataInputStream inputStream;
+
 
 
     private String receiverEmail;
@@ -29,11 +31,16 @@ public class MailFile{
         sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
         try{
             sslSocket = (SSLSocket) sslSocketFactory.createSocket(host,port);
+            outputStream = new DataOutputStream(sslSocket.getOutputStream());
+            inputStream = new DataInputStream(sslSocket.getInputStream());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        
+
 
 
     }
