@@ -12,11 +12,12 @@ import java.util.logging.SimpleFormatter;
 public class MailFile{
 
     private static final Logger LOG = Logger.getLogger(MailFile.class.getName());
+    public static final int TIMEOUT = 20;
 
     private SSLSocketFactory sslSocketFactory;
-    private SSLSocket sslSocket;
-    private DataOutputStream outputStream;
-    private BufferedReader inputReader;
+    private static SSLSocket sslSocket;
+    private static DataOutputStream outputStream;
+    private static BufferedReader inputReader;
 
 
 
@@ -32,31 +33,69 @@ public class MailFile{
             sslSocket = (SSLSocket) sslSocketFactory.createSocket(host,port);
             outputStream = new DataOutputStream(sslSocket.getOutputStream());
             inputReader = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-            System.out.println("Server " + inputReader.readLine());
+            sslSocket.setKeepAlive(true);
+            logInput();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         
-
-
-
     }
 
     public static void main(String[] args){
+    	MailFile mf = null;
         try {
-            new MailFile("mailgate.informatik.haw-hamburg.de", 465);
+           mf = new MailFile("mailgate.informatik.haw-hamburg.de", 465);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        
+        mf.handshake();
+        try {
+			inputReader.close();
+			outputStream.close();
+	        sslSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+    }
+    
+    public void authentication() {
+    	
     }
 
     //handshake
     public void handshake(){
-
+    	try {
+    		LOG.info("Client: EHLO mailgate.informatik.haw-hamburg.de");
+			outputStream.writeBytes("EHLO mailgate.informatik.haw-hamburg.de "+ '\r' + '\n');
+			sleep();
+			logInput();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     }
+    
+    public void logInput() {
+    	try {
+			LOG.info("Server " + inputReader.readLine());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+    
+
+    private void sleep() {
+        try {
+            Thread.sleep(TIMEOUT);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+}
 
     private static void configLogger() {
         try {
@@ -67,7 +106,7 @@ public class MailFile{
 
             LOG.addHandler(handler);
 
-            LOG.info("HALLO0");
+            LOG.info("Client-Server Communication");
 
         } catch (IOException e) {
             e.printStackTrace();
