@@ -1,10 +1,9 @@
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
@@ -17,7 +16,7 @@ public class MailFile{
     private SSLSocketFactory sslSocketFactory;
     private SSLSocket sslSocket;
     private DataOutputStream outputStream;
-    private DataInputStream inputStream;
+    private BufferedReader inputReader;
 
 
 
@@ -32,7 +31,8 @@ public class MailFile{
         try{
             sslSocket = (SSLSocket) sslSocketFactory.createSocket(host,port);
             outputStream = new DataOutputStream(sslSocket.getOutputStream());
-            inputStream = new DataInputStream(sslSocket.getInputStream());
+            inputReader = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+            System.out.println("Server " + inputReader.readLine());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -46,7 +46,11 @@ public class MailFile{
     }
 
     public static void main(String[] args){
-
+        try {
+            new MailFile("mailgate.informatik.haw-hamburg.de", 465);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     //handshake
