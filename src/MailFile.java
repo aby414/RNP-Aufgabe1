@@ -5,6 +5,9 @@ import javax.net.ssl.SSLSocketFactory;
 import java.awt.SecondaryLoop;
 import java.io.*;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Properties;
@@ -15,6 +18,8 @@ import java.util.logging.SimpleFormatter;
 
 public class MailFile {
 
+	private static final String ENCODE_TYPE = "base64";
+	private static final String MIME_VERSION = "1.0"; 
 	private static final String CONFIGPATH = "config.properties";
 	private static final Logger LOG = Logger.getLogger(MailFile.class.getName());
 	public static final int TIMEOUT = 20;
@@ -26,11 +31,9 @@ public class MailFile {
 	private static Properties prop = new Properties();
 	public static InputStream propInput;
 
-	private Base64.Encoder encoder;
 
-	private String receiverEmail;
-	private String attachment;
-
+	
+	
 	// https://www.programcreek.com/java-api-examples/javax.net.ssl.SSLSocketFactory
 	public MailFile() {
 		configProperties();
@@ -53,8 +56,9 @@ public class MailFile {
 		MailFile mf = new MailFile();
 
 		mf.handshake();
-		mf.authentication("sah");
-		mf.sendMail(prop.getProperty("mailadress"),args[0], prop.getProperty("subject"), prop.getProperty("body"));
+		mf.authentication();
+		mf.sendMail(prop.getProperty("mailadress"),args[0], prop.getProperty("subject"), prop.getProperty("body"), args[1]);
+		
 		try {
 			mf.sendAndLog("QUIT");
 			inputReader.close();
@@ -62,7 +66,6 @@ public class MailFile {
 			sslSocket.close();
 			propInput.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -78,7 +81,18 @@ public class MailFile {
 			
 	}
 
-	public void sendMail(String from, String to, String subject, String data) {
+	public void sendMail(String from, String to, String subject, String data, String filepath) {
+		
+		//https://stackoverflow.com/questions/858980/file-to-byte-in-java
+		File file = new File(filepath);
+		Path path = Paths.get(filepath);
+		byte[] fileInBytes = null;
+		try {
+			fileInBytes = Files.readAllBytes(path);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		sendAndLog("MAIL FROM:<" + from + ">");
 		sendAndLog("RCPT TO:<" + to + ">");
 		sendAndLog("DATA");
@@ -86,21 +100,36 @@ public class MailFile {
 		send("From:<" + from + ">");
 		send("To:<" + to + ">");
 		send("Subject: " + subject);
-		send(data);
-		sendAndLog(".");
+		send("MIME-Version: " + MIME_VERSION);
+		send("Content-type: multipart/mixed; boundary=frontier");
+	
+		
+		send("Content-Type: text/plain");
+        send(data);
+        send("--frontier");
+        
+        //https://wiki.selfhtml.org/wiki/MIME-Type/%C3%9Cbersicht
+        send("Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        send("Content-Transfer-Encoding: " + ENCODE_TYPE);
+		send("Content-Disposition: attachment; filename=" + file.getName());
+		send(encode(new String(fileInBytes)));
+		send("--frontier--");
+	
+	
+        sendAndLog(".");
+		
 	}
 
-	public void authentication(String password) {
-
-		sendAndLog("AUTH LOGIN");
-
-		sendAndLog("YWJ5NDE0");
-
-		sendAndLog("Um95YWxzMTIz");
+	public void authentication() {
+		Console console = System.console();
+		char[] consolePassword = console.readPassword("Enter password: ");  
+		String password = new String(consolePassword);
+		String plainParam = encode("\0" + prop.getProperty("username") + "\0" + password);
+		sendAndLog("AUTH PLAIN " + plainParam);
 	}
 	
 	public String encode(String string) {
-		return encoder.encodeToString(string.getBytes());
+		return Base64.getEncoder().encodeToString(string.getBytes());
 	}
 
 	public void send(String message) {
@@ -122,7 +151,7 @@ public class MailFile {
 		}
 	}
 
-	// handshake
+	
 	public void handshake() {
 		sendAndLog("EHLO mailgate.informatik.haw-hamburg.de ");
 	}
