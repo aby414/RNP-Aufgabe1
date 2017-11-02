@@ -1,14 +1,11 @@
-import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import java.awt.SecondaryLoop;
 import java.io.*;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Properties;
 import java.util.logging.FileHandler;
@@ -22,7 +19,6 @@ public class MailFile {
 	private static final String MIME_VERSION = "1.0"; 
 	private static final String CONFIGPATH = "config.properties";
 	private static final Logger LOG = Logger.getLogger(MailFile.class.getName());
-	public static final int TIMEOUT = 20;
 
 	private SSLSocketFactory sslSocketFactory;
 	private static SSLSocket sslSocket;
@@ -101,20 +97,22 @@ public class MailFile {
 		send("To:<" + to + ">");
 		send("Subject: " + subject);
 		send("MIME-Version: " + MIME_VERSION);
-		send("Content-type: multipart/mixed; boundary=frontier");
+		send("Content-Type: multipart/mixed; boundary=frontier");
 	
+		send("--frontier");
 		
-		send("Content-Type: text/plain");
+		//send("Content-Transfer-Encoding: quoted-printable\n");
+		send("Content-Type: text/plain\n");
         send(data);
         send("--frontier");
         
         //https://wiki.selfhtml.org/wiki/MIME-Type/%C3%9Cbersicht
-        send("Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         send("Content-Transfer-Encoding: " + ENCODE_TYPE);
-		send("Content-Disposition: attachment; filename=" + file.getName());
-		send(encode(new String(fileInBytes)));
+        send("Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document; name=" + file.getName());
+		send("Content-Disposition: attachment; filename=" + file.getName()+"\n");
+		send(Base64.getEncoder().encodeToString(fileInBytes));
 		send("--frontier--");
-	
+		
 	
         sendAndLog(".");
 		
@@ -135,7 +133,7 @@ public class MailFile {
 	public void send(String message) {
 		try {
 			LOG.info("Client -> " + message);
-			outputStream.writeBytes(message + "\r" + "\n");
+			outputStream.writeBytes(message + "\n");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -144,7 +142,7 @@ public class MailFile {
 	public void sendAndLog(String message) {
 		try {
 			LOG.info("Client -> " + message);
-			outputStream.writeBytes(message + "\r" + "\n");
+			outputStream.writeBytes(message + "\n");
 			logInput();
 		} catch (IOException e) {
 			e.printStackTrace();
